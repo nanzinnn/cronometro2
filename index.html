@@ -1,13 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-<link rel="manifest" href="manifest.json">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 
-<script>
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js");
-}
-</script>
+<title>Minutagens</title>
+
 <style>
 /* RESET BÁSICO */
 body {
@@ -15,61 +13,31 @@ body {
     padding: 0;
     background: #1e1e1e;
     font-family: Arial, sans-serif;
+
     display: flex;
     justify-content: center;
     align-items: center;
+
+    width: 100vw;
     height: 100vh;
 }
 
-/* CONTAINER GERAL (CORPO CLARO) */
-body > div,
-body > hr,
-body > button {
-    box-sizing: border-box;
-}
+/* CONTAINER 9:16 */
+#app {
+    width: 100vw;
+    max-width: 430px;
+    height: 100vh;
+    aspect-ratio: 9 / 16;
 
-/* PAINEL PRINCIPAL */<!DOCTYPE html>
-<html>
-<head>
-<style>
-/* RESET BÁSICO */
-body {
-    margin: 0;
-    padding: 0;
-    background: #1e1e1e;
-    font-family: Arial, sans-serif;
+    background: #e5e5e5;
+
     display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-}
-
-/* CONTAINER GERAL (CORPO CLARO) */
-body > div,
-body > hr,
-body > button {
-    box-sizing: border-box;
-}
-
-/* PAINEL PRINCIPAL */
-body {
     flex-direction: column;
 }
 
-#tasks,
-#screen,
-#keyboard,
-#totalTime,
-#playBtn {
+/* GARANTE BOX-SIZING */
+#app * {
     box-sizing: border-box;
-}
-
-/* ENVOLVE TUDO */
-#tasks,
-#screen,
-#keyboard,
-div:last-of-type {
-    width: 320px;
 }
 
 /* TOPO - TAREFAS */
@@ -79,11 +47,6 @@ div:last-of-type {
     display: flex;
     gap: 8px;
     align-items: center;
-    justify-content: flex-start;
-}
-
-#tasks br {
-    display: none;
 }
 
 #tasks::after {
@@ -91,11 +54,11 @@ div:last-of-type {
     flex: 1;
 }
 
-/* BOTÃO + */
 button {
     cursor: pointer;
 }
 
+/* BOTÃO + */
 button[onclick="addTask()"] {
     width: 30px;
     height: 30px;
@@ -106,9 +69,9 @@ button[onclick="addTask()"] {
     border-radius: 4px;
 }
 
-/* LINHA SEPARADORA */
+/* LINHA */
 hr {
-    width: 320px;
+    width: 100%;
     border: none;
     height: 10px;
     background: #e5e5e5;
@@ -119,22 +82,22 @@ hr {
 #screen {
     background: #e5e5e5;
     padding: 15px;
+    flex: 1;
 }
 
 /* BLOCO DE NOTAS */
 #notes {
     width: 100%;
-    height: 320px;
+    height: 100%;
     background: #6b6b6b;
     color: white;
     border: none;
     resize: none;
     font-size: 18px;
     padding: 10px;
-    box-sizing: border-box;
 }
 
-/* TECLADO TELEFONE */
+/* TECLADO */
 #keyboard {
     background: #e5e5e5;
     padding: 10px;
@@ -152,8 +115,8 @@ hr {
     border-radius: 6px;
 }
 
-/* BARRA INFERIOR */
-div:last-of-type {
+/* RODAPÉ */
+#footer {
     background: #e5e5e5;
     padding: 15px;
     display: flex;
@@ -167,7 +130,7 @@ div:last-of-type {
     font-weight: bold;
 }
 
-/* PLAY / PAUSE */
+/* PLAY */
 #playBtn {
     width: 50px;
     height: 40px;
@@ -178,47 +141,48 @@ div:last-of-type {
     border-radius: 6px;
 }
 </style>
-
-<meta charset="UTF-8">
-<title>Minutagens</title>
 </head>
 
 <body>
 
-<!-- TOPO: TAREFAS -->
-<div id="tasks"></div>
-<button onclick="addTask()">+</button>
+<div id="app">
 
-<hr>
+    <!-- TOPO -->
+    <div id="tasks"></div>
+    <button onclick="addTask()">+</button>
 
-<!-- BLOCO CENTRAL -->
-<div id="screen" onclick="showPhoneKeyboard()">
-<textarea id="notes" rows="10" cols="30" placeholder="Digite os tempos..."></textarea>
-</div>
+    <hr>
 
-<!-- TECLADO TELEFONE -->
-<div id="keyboard" style="display:none;">
-<button onclick="press('1')">1</button>
-<button onclick="press('2')">2</button>
-<button onclick="press('3')">3</button><br>
-<button onclick="press('4')">4</button>
-<button onclick="press('5')">5</button>
-<button onclick="press('6')">6</button><br>
-<button onclick="press('7')">7</button>
-<button onclick="press('8')">8</button>
-<button onclick="press('9')">9</button><br>
-<button onclick="press(':')">*</button>
-<button onclick="press('0')">0</button>
-<button onclick="newline()">↵</button>
-</div>
+    <!-- BLOCO CENTRAL -->
+    <div id="screen" onclick="showPhoneKeyboard()">
+        <textarea id="notes" placeholder="Digite os tempos..."></textarea>
+    </div>
 
-<hr>
+    <!-- TECLADO -->
+    <div id="keyboard" style="display:none;">
+        <button onclick="press('1')">1</button>
+        <button onclick="press('2')">2</button>
+        <button onclick="press('3')">3</button><br>
+        <button onclick="press('4')">4</button>
+        <button onclick="press('5')">5</button>
+        <button onclick="press('6')">6</button><br>
+        <button onclick="press('7')">7</button>
+        <button onclick="press('8')">8</button>
+        <button onclick="press('9')">9</button><br>
+        <button onclick="press(':')">*</button>
+        <button onclick="press('0')">0</button>
+        <button onclick="newline()">↵</button>
+    </div>
 
-<!-- RODAPÉ -->
-<div>
-<span id="totalTime">00:00</span>
-<button onclick="togglePlay()" id="playBtn">▶</button>
-<button onclick="clearNotes()">🗑</button>
+    <hr>
+
+    <!-- RODAPÉ -->
+    <div id="footer">
+        <span id="totalTime">00:00</span>
+        <button onclick="togglePlay()" id="playBtn">▶</button>
+        <button onclick="clearNotes()">🗑</button>
+    </div>
+
 </div>
 
 <script>
@@ -344,7 +308,6 @@ function run() {
         if (!playing) return;
 
         timers[currentIndex]--;
-
         updateDisplay();
 
         if (timers[currentIndex] <= 0) {
@@ -383,4 +346,5 @@ function updateDisplay() {
 
 </body>
 </html>
+
 
