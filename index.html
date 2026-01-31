@@ -7,7 +7,6 @@
 <title>Minutagens</title>
 
 <style>
-/* RESET BÁSICO */
 body {
     margin: 0;
     padding: 0;
@@ -22,43 +21,34 @@ body {
     height: 100vh;
 }
 
-/* CONTAINER 9:16 */
 #app {
     width: 100vw;
     max-width: 430px;
     height: 100vh;
     aspect-ratio: 9 / 16;
-
     background: #e5e5e5;
-
     display: flex;
     flex-direction: column;
 }
 
-/* GARANTE BOX-SIZING */
 #app * {
     box-sizing: border-box;
 }
 
-/* TOPO - TAREFAS */
+/* TOPO */
 #tasks {
     background: #e5e5e5;
     padding: 10px;
     display: flex;
     gap: 8px;
     align-items: center;
-}
-
-#tasks::after {
-    content: "";
-    flex: 1;
+    flex-wrap: wrap;
 }
 
 button {
     cursor: pointer;
 }
 
-/* BOTÃO + */
 button[onclick="addTask()"] {
     width: 30px;
     height: 30px;
@@ -69,7 +59,6 @@ button[onclick="addTask()"] {
     border-radius: 4px;
 }
 
-/* LINHA */
 hr {
     width: 100%;
     border: none;
@@ -124,13 +113,11 @@ hr {
     align-items: center;
 }
 
-/* TEMPO TOTAL */
 #totalTime {
     font-size: 22px;
     font-weight: bold;
 }
 
-/* PLAY */
 #playBtn {
     width: 50px;
     height: 40px;
@@ -186,7 +173,7 @@ hr {
 </div>
 
 <script>
-let tasks = [];
+let tasks = []; // { name: string, color: string }
 let timers = [];
 let originalTimers = [];
 let currentIndex = 0;
@@ -198,17 +185,39 @@ function renderTasks(activeTaskIndex = null) {
     let html = "";
     tasks.forEach((t, i) => {
         let size = (i === activeTaskIndex) ? "22px" : "16px";
-        html += `<span style="font-size:${size}">${t}</span> `;
+        let border = (i === activeTaskIndex) ? "2px solid #000" : "none";
+        html += `<span style="
+            font-size:${size};
+            background:${t.color};
+            padding:4px 8px;
+            border-radius:4px;
+            border:${border};
+            color:#000;
+        ">${t.name}</span> `;
     });
     document.getElementById("tasks").innerHTML = html;
 }
 
 function addTask() {
     let name = prompt("Nome da tarefa:");
-    if (name) {
-        tasks.push(name);
-        renderTasks();
+    if (!name) return;
+
+    let color = prompt("Cor da tarefa: azul, amarelo, vermelho ou roxo").toLowerCase();
+
+    const colorsMap = {
+        azul: "#4da3ff",
+        amarelo: "#ffd84d",
+        vermelho: "#ff5c5c",
+        roxo: "#b57bff"
+    };
+
+    if (!colorsMap[color]) {
+        alert("Cor inválida. Use: azul, amarelo, vermelho ou roxo.");
+        return;
     }
+
+    tasks.push({ name, color: colorsMap[color] });
+    renderTasks();
 }
 
 /* ===== TECLADO ===== */
@@ -239,6 +248,7 @@ function clearNotes() {
     document.getElementById("playBtn").innerText = "▶";
     document.getElementById("notes").value = "";
     document.getElementById("totalTime").innerText = "00:00";
+    document.getElementById("notes").style.background = "#6b6b6b";
     timers = [];
     originalTimers = [];
     currentIndex = 0;
@@ -341,10 +351,13 @@ function updateDisplay() {
 
     let activeTaskIndex = currentIndex % tasks.length;
     renderTasks(activeTaskIndex);
+
+    // MUDA A COR DO BLOCO DE TEXTO
+    if (tasks[activeTaskIndex]) {
+        document.getElementById("notes").style.background = tasks[activeTaskIndex].color;
+    }
 }
 </script>
 
 </body>
 </html>
-
-
