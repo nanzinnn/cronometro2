@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="manifest" href="manifest.json">
+
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js");
+}
+</script>
+<style>
+/* RESET BÁSICO */
+body {
+    margin: 0;
+    padding: 0;
+    background: #1e1e1e;
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+/* CONTAINER GERAL (CORPO CLARO) */
+body > div,
+body > hr,
+body > button {
+    box-sizing: border-box;
+}
+
+/* PAINEL PRINCIPAL */<!DOCTYPE html>
+<html>
+<head>
+<style>
+/* RESET BÁSICO */
+body {
+    margin: 0;
+    padding: 0;
+    background: #1e1e1e;
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+/* CONTAINER GERAL (CORPO CLARO) */
+body > div,
+body > hr,
+body > button {
+    box-sizing: border-box;
+}
+
+/* PAINEL PRINCIPAL */
+body {
+    flex-direction: column;
+}
+
+#tasks,
+#screen,
+#keyboard,
+#totalTime,
+#playBtn {
+    box-sizing: border-box;
+}
+
+/* ENVOLVE TUDO */
+#tasks,
+#screen,
+#keyboard,
+div:last-of-type {
+    width: 320px;
+}
+
+/* TOPO - TAREFAS */
+#tasks {
+    background: #e5e5e5;
+    padding: 10px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+#tasks br {
+    display: none;
+}
+
+#tasks::after {
+    content: "";
+    flex: 1;
+}
+
+/* BOTÃO + */
+button {
+    cursor: pointer;
+}
+
+button[onclick="addTask()"] {
+    width: 30px;
+    height: 30px;
+    font-size: 20px;
+    background: #666;
+    color: white;
+    border: none;
+    border-radius: 4px;
+}
+
+/* LINHA SEPARADORA */
+hr {
+    width: 320px;
+    border: none;
+    height: 10px;
+    background: #e5e5e5;
+    margin: 0;
+}
+
+/* BLOCO CENTRAL */
+#screen {
+    background: #e5e5e5;
+    padding: 15px;
+}
+
+/* BLOCO DE NOTAS */
+#notes {
+    width: 100%;
+    height: 320px;
+    background: #6b6b6b;
+    color: white;
+    border: none;
+    resize: none;
+    font-size: 18px;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+/* TECLADO TELEFONE */
+#keyboard {
+    background: #e5e5e5;
+    padding: 10px;
+    text-align: center;
+}
+
+#keyboard button {
+    width: 60px;
+    height: 50px;
+    margin: 5px;
+    font-size: 18px;
+    background: #555;
+    color: white;
+    border: none;
+    border-radius: 6px;
+}
+
+/* BARRA INFERIOR */
+div:last-of-type {
+    background: #e5e5e5;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* TEMPO TOTAL */
+#totalTime {
+    font-size: 22px;
+    font-weight: bold;
+}
+
+/* PLAY / PAUSE */
+#playBtn {
+    width: 50px;
+    height: 40px;
+    font-size: 20px;
+    background: #555;
+    color: white;
+    border: none;
+    border-radius: 6px;
+}
+</style>
+
+<meta charset="UTF-8">
+<title>Minutagens</title>
+</head>
+
+<body>
+
+<!-- TOPO: TAREFAS -->
+<div id="tasks"></div>
+<button onclick="addTask()">+</button>
+
+<hr>
+
+<!-- BLOCO CENTRAL -->
+<div id="screen" onclick="showPhoneKeyboard()">
+<textarea id="notes" rows="10" cols="30" placeholder="Digite os tempos..."></textarea>
+</div>
+
+<!-- TECLADO TELEFONE -->
+<div id="keyboard" style="display:none;">
+<button onclick="press('1')">1</button>
+<button onclick="press('2')">2</button>
+<button onclick="press('3')">3</button><br>
+<button onclick="press('4')">4</button>
+<button onclick="press('5')">5</button>
+<button onclick="press('6')">6</button><br>
+<button onclick="press('7')">7</button>
+<button onclick="press('8')">8</button>
+<button onclick="press('9')">9</button><br>
+<button onclick="press(':')">*</button>
+<button onclick="press('0')">0</button>
+<button onclick="newline()">↵</button>
+</div>
+
+<hr>
+
+<!-- RODAPÉ -->
+<div>
+<span id="totalTime">00:00</span>
+<button onclick="togglePlay()" id="playBtn">▶</button>
+<button onclick="clearNotes()">🗑</button>
+</div>
+
+<script>
+let tasks = [];
+let timers = [];
+let originalTimers = [];
+let currentIndex = 0;
+let playing = false;
+let interval = null;
+
+/* ===== TAREFAS ===== */
+function renderTasks(activeTaskIndex = null) {
+    let html = "";
+    tasks.forEach((t, i) => {
+        let size = (i === activeTaskIndex) ? "22px" : "16px";
+        html += `<span style="font-size:${size}">${t}</span> `;
+    });
+    document.getElementById("tasks").innerHTML = html;
+}
+
+function addTask() {
+    let name = prompt("Nome da tarefa:");
+    if (name) {
+        tasks.push(name);
+        renderTasks();
+    }
+}
+
+/* ===== TECLADO ===== */
+function showPhoneKeyboard() {
+    if (!playing) {
+        document.getElementById("keyboard").style.display = "block";
+    }
+}
+
+function hidePhoneKeyboard() {
+    document.getElementById("keyboard").style.display = "none";
+}
+
+function press(val) {
+    document.getElementById("notes").value += val;
+    recalc();
+}
+
+function newline() {
+    document.getElementById("notes").value += "\n";
+    recalc();
+}
+
+/* ===== LIMPAR ===== */
+function clearNotes() {
+    stop();
+    playing = false;
+    document.getElementById("playBtn").innerText = "▶";
+    document.getElementById("notes").value = "";
+    document.getElementById("totalTime").innerText = "00:00";
+    timers = [];
+    originalTimers = [];
+    currentIndex = 0;
+    renderTasks(null);
+}
+
+/* ===== TEMPOS ===== */
+function parseTimes() {
+    let text = document.getElementById("notes").value.trim();
+    if (!text) return [];
+    let lines = text.split("\n");
+    return lines.map(l => {
+        let p = l.split(":");
+        return parseInt(p[0]) * 60 + parseInt(p[1]);
+    });
+}
+
+function format(sec) {
+    let m = Math.floor(sec / 60);
+    let s = sec % 60;
+    return String(m).padStart(2,"0") + ":" + String(s).padStart(2,"0");
+}
+
+function recalc() {
+    let times = parseTimes();
+    let total = times.reduce((a,b)=>a+b,0);
+    document.getElementById("totalTime").innerText = format(total);
+}
+
+/* ===== PLAY / PAUSE ===== */
+function togglePlay() {
+    if (tasks.length === 0) {
+        alert("Adicione pelo menos uma tarefa.");
+        return;
+    }
+
+    if (parseTimes().length === 0) {
+        alert("Adicione pelo menos um tempo.");
+        return;
+    }
+
+    playing = !playing;
+    document.getElementById("playBtn").innerText = playing ? "⏸" : "▶";
+
+    if (playing) {
+        hidePhoneKeyboard();
+        start();
+    } else {
+        stop();
+    }
+}
+
+function start() {
+    originalTimers = parseTimes();
+    timers = [...originalTimers];
+    currentIndex = 0;
+    run();
+}
+
+function run() {
+    if (currentIndex >= timers.length) {
+        stop();
+        return;
+    }
+
+    interval = setInterval(() => {
+        if (!playing) return;
+
+        timers[currentIndex]--;
+
+        updateDisplay();
+
+        if (timers[currentIndex] <= 0) {
+            clearInterval(interval);
+            currentIndex++;
+            run();
+        }
+    }, 1000);
+}
+
+function stop() {
+    clearInterval(interval);
+}
+
+/* ===== ATUALIZA UI ===== */
+function updateDisplay() {
+    let lines = document.getElementById("notes").value.trim().split("\n");
+    let newText = "";
+
+    lines.forEach((l, i) => {
+        if (i === currentIndex) {
+            l = format(timers[i]);
+        }
+        newText += l + "\n";
+    });
+
+    document.getElementById("notes").value = newText.trim();
+
+    let total = timers.reduce((a,b)=>a+b,0);
+    document.getElementById("totalTime").innerText = format(total);
+
+    let activeTaskIndex = currentIndex % tasks.length;
+    renderTasks(activeTaskIndex);
+}
+</script>
+
+</body>
+</html>
+
