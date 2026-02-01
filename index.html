@@ -1,12 +1,20 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+<link rel="manifest" href="manifest.json">
+
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js");
+}
+</script>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-
 <title>Minutagens</title>
 
 <style>
+/* RESET */
 body {
     margin: 0;
     padding: 0;
@@ -21,6 +29,7 @@ body {
     height: 100vh;
 }
 
+/* CONTAINER 9:16 */
 #app {
     width: 100vw;
     max-width: 430px;
@@ -43,6 +52,19 @@ body {
     gap: 8px;
     align-items: center;
     flex-wrap: wrap;
+}
+
+.task {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    color: #000;
+}
+
+.task.active {
+    font-size: 22px;
+    border: 2px solid #000;
 }
 
 button {
@@ -127,6 +149,25 @@ hr {
     border: none;
     border-radius: 6px;
 }
+
+/* SELETOR DE CORES */
+#colorPicker {
+    position: fixed;
+    bottom: 80px;
+    background: #333;
+    padding: 10px;
+    border-radius: 10px;
+    display: none;
+    gap: 10px;
+}
+
+.colorOption {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid #fff;
+}
 </style>
 </head>
 
@@ -172,52 +213,58 @@ hr {
 
 </div>
 
+<!-- PAINEL DE CORES -->
+<div id="colorPicker">
+    <div class="colorOption" style="background:#4da3ff" onclick="setTaskColor('#4da3ff')"></div>
+    <div class="colorOption" style="background:#ffd84d" onclick="setTaskColor('#ffd84d')"></div>
+    <div class="colorOption" style="background:#ff5c5c" onclick="setTaskColor('#ff5c5c')"></div>
+    <div class="colorOption" style="background:#b57bff" onclick="setTaskColor('#b57bff')"></div>
+</div>
+
 <script>
-let tasks = []; // { name: string, color: string }
+let tasks = []; // { name, color }
 let timers = [];
 let originalTimers = [];
 let currentIndex = 0;
 let playing = false;
 let interval = null;
+let selectedTaskIndex = null;
 
 /* ===== TAREFAS ===== */
 function renderTasks(activeTaskIndex = null) {
-    let html = "";
+    const container = document.getElementById("tasks");
+    container.innerHTML = "";
+
     tasks.forEach((t, i) => {
-        let size = (i === activeTaskIndex) ? "22px" : "16px";
-        let border = (i === activeTaskIndex) ? "2px solid #000" : "none";
-        html += `<span style="
-            font-size:${size};
-            background:${t.color};
-            padding:4px 8px;
-            border-radius:4px;
-            border:${border};
-            color:#000;
-        ">${t.name}</span> `;
+        const span = document.createElement("span");
+        span.className = "task" + (i === activeTaskIndex ? " active" : "");
+        span.style.background = t.color || "#ccc";
+        span.textContent = t.name;
+        span.onclick = () => openColorPicker(i);
+        container.appendChild(span);
     });
-    document.getElementById("tasks").innerHTML = html;
 }
 
 function addTask() {
     let name = prompt("Nome da tarefa:");
     if (!name) return;
 
-    let color = prompt("Cor da tarefa: azul, amarelo, vermelho ou roxo").toLowerCase();
+    tasks.push({ name, color: "#4da3ff" }); // cor padrão
+    renderTasks(currentIndex % (tasks.length || 1));
+}
 
-    const colorsMap = {
-        azul: "#4da3ff",
-        amarelo: "#ffd84d",
-        vermelho: "#ff5c5c",
-        roxo: "#b57bff"
-    };
+/* ===== SELETOR DE COR ===== */
+function openColorPicker(index) {
+    selectedTaskIndex = index;
+    document.getElementById("colorPicker").style.display = "flex";
+}
 
-    if (!colorsMap[color]) {
-        alert("Cor inválida. Use: azul, amarelo, vermelho ou roxo.");
-        return;
-    }
-
-    tasks.push({ name, color: colorsMap[color] });
-    renderTasks();
+function setTaskColor(color) {
+    if (selectedTaskIndex === null) return;
+    tasks[selectedTaskIndex].color = color;
+    selectedTaskIndex = null;
+    document.getElementById("colorPicker").style.display = "none";
+    renderTasks(currentIndex % (tasks.length || 1));
 }
 
 /* ===== TECLADO ===== */
@@ -231,6 +278,7 @@ function hidePhoneKeyboard() {
     document.getElementById("keyboard").style.display = "none";
 }
 
+/* ===== INPUT ===== */
 function press(val) {
     document.getElementById("notes").value += val;
     recalc();
@@ -352,7 +400,6 @@ function updateDisplay() {
     let activeTaskIndex = currentIndex % tasks.length;
     renderTasks(activeTaskIndex);
 
-    // MUDA A COR DO BLOCO DE TEXTO
     if (tasks[activeTaskIndex]) {
         document.getElementById("notes").style.background = tasks[activeTaskIndex].color;
     }
