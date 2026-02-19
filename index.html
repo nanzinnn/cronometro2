@@ -222,189 +222,200 @@ hr {
 </div>
 
 <script>
-let tasks = []; // { name, color }
-let timers = [];
-let originalTimers = [];
+let timerInterval;
+let totalSeconds = 0;
+let isRunning = false;
 let currentIndex = 0;
-let playing = false;
-let interval = null;
-let selectedTaskIndex = null;
+let sequence = [];
 
-/* ===== TAREFAS ===== */
-function renderTasks(activeTaskIndex = null) {
-    const container = document.getElementById("tasks");
-    container.innerHTML = "";
+/* =========================
+   LOOPING PARSER
+========================= */
 
-    tasks.forEach((t, i) => {
-        const span = document.createElement("span");
-        span.className = "task" + (i === activeTaskIndex ? " active" : "");
-        span.style.background = t.color || "#ccc";
-        span.textContent = t.name;
-        span.onclick = () => openColorPicker(i);
-        container.appendChild(span);
+function buildSequence() {
+    const text = document.getElementById("notes").value.trim().toUpperCase();
+    const lines = text.split("\n").map(l => l.trim()).filter(l => l !== "");
+
+    sequence = [];
+
+    let loopCount = 1;
+    let loopStart = -1;
+    let loopEnd = -1;
+
+    lines.forEach((line, index) => {
+        if (line.startsWith("LOOPING")) {
+            const match = line.match(/LOOPING\s+(\d+)X/);
+            if (match) {
+                loopCount = parseInt(match[1]);
+                loopStart = index + 1;
+            }
+        }
+
+        if (line === "END") {
+            loopEnd = index;
+        }
     });
-}
 
-function addTask() {
-    let name = prompt("Nome da tarefa:");
-    if (!name) return;
+    const normalTimes = [];
+    const loopTimes = [];
 
-    tasks.push({ name, color: "#4da3ff" }); // cor padrão
-    renderTasks(currentIndex % (tasks.length || 1));
-}
+    lines.forEach((line, index) => {
+        if (/^\d+:\d+$/.test(line)) {
+            if (loopStart !== -1 && loopEnd !== -1) {
+                if (index >= loopStart && index < loopEnd) {
+                    loopTimes.push(line);
+                } else if (index > loopEnd) {
+                    normalTimes.push(line);
+                }
+            } else if (loopStart !== -1) {
+                if (index >= loopStart) {
+                    loopTimes.push(line);
+                }
+            } else {
+                normalTimes.push(line);
+            }
+        }
+    });
 
-/* ===== SELETOR DE COR ===== */
-function openColorPicker(index) {
-    selectedTaskIndex = index;
-    document.getElementById("colorPicker").style.display = "flex";
-}
-
-function setTaskColor(color) {
-    if (selectedTaskIndex === null) return;
-    tasks[selectedTaskIndex].color = color;
-    selectedTaskIndex = null;
-    document.getElementById("colorPicker").style.display = "none";
-    renderTasks(currentIndex % (tasks.length || 1));
-}
-
-/* ===== TECLADO ===== */
-function showPhoneKeyboard() {
-    if (!playing) {
-        document.getElementById("keyboard").style.display = "block";
+    if (loopTimes.length > 0) {
+        for (let i = 0; i < loopCount; i++) {
+            sequence.push(...loopTimes);
+        }
     }
+
+    sequence.push(...normalTimes);
 }
 
-function hidePhoneKeyboard() {
-    document.getElementById("keyboard").style.display = "none";
-}
+/* =========================
+   TIMER
+========================= */
 
-/* ===== INPUT ===== */
-function press(val) {
-    document.getElementById("notes").value += val;
-    recalc();
-}
-
-function newline() {
-    document.getElementById("notes").value += "\n";
-    recalc();
-}
-
-/* ===== LIMPAR ===== */
-function clearNotes() {
-    stop();
-    playing = false;
-    document.getElementById("playBtn").innerText = "▶";
-    document.getElementById("notes").value = "";
-    document.getElementById("totalTime").innerText = "00:00";
-    document.getElementById("notes").style.background = "#6b6b6b";
-    timers = [];
-    originalTimers = [];
-    currentIndex = 0;
-    renderTasks(null);
-}
-
-/* ===== TEMPOS ===== */
-function parseTimes() {
-    let text = document.getElementById("notes").value.trim();
-    if (!text) return [];
-    let lines = text.split("\n");
-    return lines.map(l => {
-        let p = l.split(":");
-        return parseInt(p[0]) * 60 + parseInt(p[1]);
-    });
-}
-
-function format(sec) {
-    let m = Math.floor(sec / 60);
-    let s = sec % 60;
-    return String(m).padStart(2,"0") + ":" + String(s).padStart(2,"0");
-}
-
-function recalc() {
-    let times = parseTimes();
-    let total = times.reduce((a,b)=>a+b,0);
-    document.getElementById("totalTime").innerText = format(total);
-}
-
-/* ===== PLAY / PAUSE ===== */
 function togglePlay() {
-    if (tasks.length === 0) {
-        alert("Adicione pelo menos uma tarefa.");
-        return;
-    }
-
-    if (parseTimes().length === 0) {
-        alert("Adicione pelo menos um tempo.");
-        return;
-    }
-
-    playing = !playing;
-    document.getElementById("playBtn").innerText = playing ? "⏸" : "▶";
-
-    if (playing) {
-        hidePhoneKeyboard();
-        start();
+    if (isRunning) {
+        pauseTimer();
     } else {
-        stop();
+        startTimer();
     }
 }
 
-function start() {
-    originalTimers = parseTimes();
-    timers = [...originalTimers];
-    currentIndex = 0;
-    run();
-}
-
-function run() {
-    if (currentIndex >= timers.length) {
-        stop();
-        return;
+function startTimer() {
+    if (sequence.length === 0) {
+        buildSequence();
+        currentIndex = 0;
     }
 
-    interval = setInterval(() => {
-        if (!playing) return;
+    if (currentIndex >= sequence.length) return;
 
-        timers[currentIndex]--;
-        updateDisplay();
+    isRunning = true;
+    document.getElementById("playBtn").innerText = "⏸";
 
-        if (timers[currentIndex] <= 0) {
-            clearInterval(interval);
+    const time = sequence[currentIndex];
+    totalSeconds = convertToSeconds(time);
+    updateDisplay();
+
+    timerInterval = setInterval(() => {
+        if (totalSeconds > 0) {
+            totalSeconds--;
+            updateDisplay();
+        } else {
+            clearInterval(timerInterval);
             currentIndex++;
-            run();
+            isRunning = false;
+            togglePlay();
         }
     }, 1000);
 }
 
-function stop() {
-    clearInterval(interval);
+function pauseTimer() {
+    clearInterval(timerInterval);
+    isRunning = false;
+    document.getElementById("playBtn").innerText = "▶";
 }
 
-/* ===== ATUALIZA UI ===== */
+function convertToSeconds(time) {
+    const parts = time.split(":");
+    return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+}
+
 function updateDisplay() {
-    let lines = document.getElementById("notes").value.trim().split("\n");
-    let newText = "";
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    document.getElementById("totalTime").innerText =
+        String(minutes).padStart(2, "0") + ":" +
+        String(seconds).padStart(2, "0");
+}
 
-    lines.forEach((l, i) => {
-        if (i === currentIndex) {
-            l = format(timers[i]);
-        }
-        newText += l + "\n";
-    });
+/* =========================
+   CLEAR
+========================= */
 
-    document.getElementById("notes").value = newText.trim();
+function clearNotes() {
+    document.getElementById("notes").value = "";
+    pauseTimer();
+    currentIndex = 0;
+    sequence = [];
+    document.getElementById("totalTime").innerText = "00:00";
+}
 
-    let total = timers.reduce((a,b)=>a+b,0);
-    document.getElementById("totalTime").innerText = format(total);
+/* =========================
+   TECLADO
+========================= */
 
-    let activeTaskIndex = currentIndex % tasks.length;
-    renderTasks(activeTaskIndex);
+function showPhoneKeyboard() {
+    document.getElementById("keyboard").style.display = "block";
+}
 
-    if (tasks[activeTaskIndex]) {
-        document.getElementById("notes").style.background = tasks[activeTaskIndex].color;
-    }
+function insertText(value) {
+    const textarea = document.getElementById("notes");
+    textarea.value += value;
+}
+
+function backspace() {
+    const textarea = document.getElementById("notes");
+    textarea.value = textarea.value.slice(0, -1);
+}
+
+/* =========================
+   TAREFAS + CORES
+========================= */
+
+let activeColor = null;
+
+function addTask() {
+    const taskName = prompt("Nome da tarefa:");
+    if (!taskName) return;
+
+    const task = document.createElement("div");
+    task.innerText = taskName;
+    task.classList.add("task");
+    task.dataset.color = "";
+
+    task.onclick = function () {
+        showColorOptions(task);
+    };
+
+    document.getElementById("tasks").appendChild(task);
+}
+
+function showColorOptions(task) {
+    const colors = ["blue", "yellow", "red", "purple"];
+    const choice = prompt("Escolha a cor:\nblue\nyellow\nred\npurple");
+
+    if (!colors.includes(choice)) return;
+
+    task.style.background = choice;
+    task.dataset.color = choice;
+
+    activateTaskColor(choice);
+}
+
+function activateTaskColor(color) {
+    activeColor = color;
+    document.getElementById("screen").style.background = color;
 }
 </script>
 
+
 </body>
 </html>
+
